@@ -1,91 +1,388 @@
 <!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <title>Unity WebGL Player GUI</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+    <script src="TemplateData/UnityProgress.js"></script>
+    <script src="Build/UnityLoader.js"></script>
+    <script src="TemplateData/eventemitter2.min.js"></script>
+    <script src="TemplateData/roslib.min.js"></script>
 
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Progate</title>
-  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
-  <link rel="stylesheet" type="text/css" href="stylesheet.css">
-</head>
-<body>
-  <header>
-    <div class="container">
-      <div class="header-left">
-        <img class="logo" src="https://prog-8.com/images/html/advanced/main_logo.png">
+    <script>
+      var unityInstance = UnityLoader.instantiate("unityContainer", "Build/test.json", {onProgress: UnityProgress});
+    </script>
+
+    <script>
+
+      /////////////////////////////////　　　配列宣言　　　////////////////////////////////////
+      
+      var i          //状態を表す変数
+      var ii = 0;　　//音声確認用変数
+
+      var array1 = new Array(8); //ゴール座標取得配列
+
+      var str_axes = new Array(5); //ゴール座標取得配列
+      var str_buttons = new Array(11); //ゴール座標取得配列
+
+      var joy_axes = new Array(5);　//ジョイメッセージ用配列
+
+      var audioElem　= new Audio();　//音楽
+
+      /////////////////////////////////////////////////////////////////////////////////////
+      
+      // rosbridgeと接続
+
+      const ros = new ROSLIB.Ros({url : 'ws://192.168.100.57:9090'});
+
+      ros.on('connection', function() {console.log('Connected to websocket server.');});
+      ros.on('error', function(error) {console.log('Error connecting to websocket server: ', error);});
+      ros.on('close', function() {console.log('Connection to websocket server closed.');
+                                 //location.reload();
+                                 });
+
+      ROSconnect_subscribe4();  
+      ROSconnect_subscribe2(); 
+
+      //setTimeout("webGL_loader()",2000);
+      //setTimeout("unityInstance.SetFullscreen(1)",2000); //PCとアンドロイド用
+
+      ///////////////////////////////////////////////////////////////////////////////////////
+
+      function webGL_loader() {
+
+      //立ち上げ時の処理 必要な場合　sample
+
+      unityInstance.SendMessage ('TestScript', 'FromJS2', '坂下');
+      unityInstance.SendMessage ('TestScript', 'FromJS5', '松本');
+      unityInstance.SendMessage ('TestScript', 'FromJS4', '岩田');
+
+      }
+
+      ///////////////////////////////////////////////////////////////////////////////////////
+
+	    function MyFunction1(arg) {
+
+        ROSconnect_publish1();    //シンプルゴール   
+
+	    }
+
+     ///////////////////////////////////////////////////////////////////////////////////////
+
+         function MyFunction2(arg) {
+
+        ROSconnect_publish2();     //キャンセル
+
+	    }
+
+     /////////////////////////////////////////////////////////////////////////////////////////
+
+      function MyFunction3(arg) {　//引数argはjoyの情報
+
+        str_axes = [-arg[0], arg[1], 0, 0, 0, 0,];
+        str_buttons = [arg[2], arg[3], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,];
+
+        ROSconnect_publish3();     //バーチャルジョイステイック
+
+	    }
+
+     /////////////////////////////////////////////////////////////////////////////////////////
+
+     //音声確認用
+
+	    function SendTextToUnity() {
+
+			 inputText = document.getElementById("input_text");
+			 unityInstance.SendMessage ('TestScript', 'FromJS', inputText.value);
+
+       if (ii == 0) {
+       unityInstance.SendMessage ('TestScript', 'Activate_obj2');
+       setTimeout(function(){
+        //audioElem.src = "Audio/いぬのさんぽ.mp3";
+        audioElem.loop = true;
+        audioElem.play();
+       },1000);
+       ii = 1 ;
+
+      }else {
+        unityInstance.SendMessage ('TestScript', 'Activate_obj3');
+        setTimeout(function(){
+          //audioElem.src = "Audio/その千鳥足、ジプシーダンスの如く的なBGM.mp3";
+          audioElem.loop = true;
+          audioElem.play();
+        },1000);
+        ii = 0 ;
+      } 
+       
+       audioElem.src = "Audio/univ0005.wav";
+       audioElem.loop = false;
+       audioElem.play();
+
+		};
+    
+    //////////////////////////////////////////////////////////////////////////////////////////
+
+	  function ROSconnect_publish1(){
+
+      //ロボットを動かすトピック 返却
+        
+        const Move_Goal = new ROSLIB.Topic({
+          ros : ros,
+          name : '/move_base_simple/goal',
+          messageType : 'geometry_msgs/PoseStamped'
+
+        });
+        
+        const post = new ROSLIB.Message({
+          header : {
+          seq : 10000,
+          stamp : {
+            secs : 1,
+            nsecs : 0
+          },
+
+          frame_id : "map"
+
+          },
+          
+          pose : {
+          
+            position : {
+              x : -6.6,
+              y : -5.8,
+              z : 0,
+              },
+            
+            orientation : {
+              x : 0,
+              y : 0,
+              z : 0.6933,
+              w : 0.7207,
+              },
+
+          },
+
+          });
+
+          Move_Goal.publish(post);
+
+      };
+
+
+////////////////////////////////////////////////////////////////////////////////////////
+      
+      function ROSconnect_publish2(){
+
+        //キャンセルのトピック
+
+      const Move_cancel = new ROSLIB.Topic({
+      ros : ros,
+      name : '/move_base/cancel',
+      messageType : 'actionlib_msgs/GoalID'
+      });
+
+      const empty = new ROSLIB.Message({
+
+       });
+
+       Move_cancel.publish(empty);
+
+     };
+
+
+  //////////////////////////////////////////////////////////////////////////////////////
+
+    function ROSconnect_publish3(){
+
+      const Move_joy = new ROSLIB.Topic({
+          ros : ros,
+          name : '/joy',
+          messageType : 'sensor_msgs/Joy'
+
+        });
+        
+        const post_joy = new ROSLIB.Message({
+          header : {
+          seq : 10000,
+          frame_id : "test"
+
+          },
+          
+            axes : str_axes,
+            buttons : str_buttons,
+
+          });
+
+          Move_joy.publish(post_joy);
+
+      };
+
+  ///////////////////////////////////////////////////////////////////////////////////////
+
+   /*function ROSconnect_publish(){
+
+        //速度指令のトピック
+        
+        const cmdVel = new ROSLIB.Topic({
+          ros : ros,
+          name : '/cmd_vel',
+          messageType : 'geometry_msgs/Twist'
+        });
+        
+        const twist = new ROSLIB.Message({
+          linear : {
+          x : 0,
+          y : 0,
+          z : 0
+          },
+          angular : {
+          x : 0,
+          y : 0,
+          z : 0
+          }
+          });
+
+         cmdVel.publish(twist);
+
+      }; */
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+      function ROSconnect_subscribe2(){
+       // ----------------------
+
+       var listener_cancel = new ROSLIB.Topic({
+           ros : ros,
+           name : '/move_base/cancel',
+           messageType : 'actionlib_msgs/GoalID'
+           });
+
+          listener_cancel.subscribe(function(message_cancel) {
+          
+          console.log('キャンセルします');
+          //audioElem.src = "Audio/お疲れさまです.wav";
+        　audioElem.play();
+          unityInstance.SendMessage ('TestScript', 'FromJS', '---');
+
+          });
+
+      };
+
+      //////////////////////////////////////////////////////////////////////////////////////////////
+
+      function ROSconnect_subscribe3(){
+       // Subscribing to a Topic ROSのmove_base(Navigation Stack)でゴールについたことを検出する。
+       // ----------------------
+
+       var listener = new ROSLIB.Topic({
+           ros : ros,
+           name : '/move_base/status',
+           messageType : 'actionlib_msgs/GoalStatusArray'
+           });
+
+          listener.subscribe(function(message_id) {
+          //console.log('Received message on ' + listener.name + ': ' + message.data);
+
+          var status_id = message_id.status_list[0].status;
+          console.log(status_id + ' status_id');
+
+          i = message_id.status_list[0].status;
+          
+          //var goalStatus = message['status_list'];  //GoalStatusArray型　(配列を代入)
+          //var goalbuffer = goalStatus[0];　　　　　　//最新の状況を確認するには配列の先頭を取り出す。
+          //var status_id = goalbuffer.status;
+          
+          //uint8 PENDING         = 0  
+          //uint8 ACTIVE          = 1 
+          //uint8 PREEMPTED       = 2
+          //uint8 SUCCEEDED       = 3
+          //uint8 ABORTED         = 4
+          //uint8 REJECTED        = 5
+          //uint8 PREEMPTING      = 6
+          //uint8 RECALLING       = 7
+          //uint8 RECALLED        = 8
+          //uint8 LOST            = 9
+
+          });
+          
+          var id = setInterval(function(){
+          
+            if (i == 3||i == 4) {
+              
+              console.log('サブスクライブを終了します');
+              unityInstance.SendMessage ('TestScript', 'Activate_obj');
+              audioElem.pause();
+              //audioElem.src = "Audio/お疲れさまです.wav";
+              audioElem.play();
+              listener.unsubscribe();
+              clearInterval(id);
+
+            }
+
+          },1000);
+
+        };
+
+      //////////////////////////////////////////////////////////////////////////////////
+
+      function ROSconnect_subscribe4(){
+
+       //  /move_base_simple/goalのトピックを常にサブスクライブをする。
+
+       var listener2 = new ROSLIB.Topic({
+           ros : ros,
+           name : '/move_base_simple/goal',
+           messageType : 'geometry_msgs/PoseStamped'
+           });
+
+          listener2.subscribe(function(message_seq) {
+
+          //console.log( message_seq.header.stamp.secs + " stampの値です");
+
+             array1[0] = message_seq.pose.position.x;
+             array1[1] = message_seq.pose.position.y;
+             array1[2] = message_seq.pose.position.z;
+             array1[3] = message_seq.pose.orientation.x;
+             array1[4] = message_seq.pose.orientation.y;
+             array1[5] = message_seq.pose.orientation.z;
+             array1[6] = message_seq.pose.orientation.w;
+              
+              //audioElem.src = "Audio/いぬのさんぽ.mp3";
+              audioElem.play();
+
+              unityInstance.SendMessage ('TestScript', 'Activate_obj2');
+
+              setTimeout("ROSconnect_subscribe3()",6000);
+
+          });
+
+        };
+
+      //////////////////////////////////////////////////////////////////////////////////
+
+  </script>
+
+  </head>
+  <body>
+
+    <div class="webgl-content">
+      <div id="unityContainer" style="width: 450px; height: 800px"></div>
+      <!--<canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" ></canvas> -->
+      <div class="footer">
+        <div class="webgl-logo"></div>
+        <div class="fullscreen" onclick="unityInstance.SetFullscreen(1)"></div>
+        <div class="title">test</div>
       </div>
-      <span class="fa fa-bars menu-icon"></span>
-      <div class="header-right">
-        <a href="#">レッスン</a>
-        <a href="#">新規登録</a>
-        <a href="#" class="login">ログイン</a>
-      </div>
-    </div>
-  </header>
-  <div class="top-wrapper">
-    <div class="container">
-      <h1>LEARN TO CODE.<br>LEARN TO BE CREATIVE.</h1>
-      <p>Progateはオンラインプログラミング学習サービスです。<br>初心者にもやさしいスライドとレッスンで、ウェブサービスを作りながらプログラミングを学んでいきましょう。</p>
-      <div class="btn-wrapper">
-        <a href="#" class="btn signup">新規登録はこちら</a>
-        <p>or</p>
-        <a href="#" class="btn facebook"><span class="fa fa-facebook"></span>Facebookで登録</a>
-        <a href="#" class="btn twitter"><span class="fa fa-twitter"></span>Twitterで登録</a>
-      </div>
-    </div>
-  </div>
-  <div class="lesson-wrapper">
-    <div class="container">
-      <div class="heading">
-        <h2>Learn Where to Get Started!</h2>
-      </div>
-      <div class="lessons">
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/html.png">
-            <p>HTML & CSS</p>
-          </div>
-          <p class="text-contents">ウェブページの作成に使用される言語です。HTMLとCSSを組み合わせることで、静的なページを作り上げることができます。</p>
+
+      <!--
+        
+        <div>
+        ここにテキストを入力：<input id="input_text" type="input" value="test"><input onclick="SendTextToUnity()" type="button" value="Send">
         </div>
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/jQuery.png">
-            <p>jQuery</p>
-          </div>
-          <p class="text-contents">素敵な動きを手軽に実装できるJavaScriptライブラリです。 アニメーション効果をつけたり、Ajax（エイジャックス）を使って外部ファイルを読み込んだりと色々なことができます。</p>
-        </div>
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/ruby.png">
-            <p>Ruby</p>
-          </div>
-          <p class="text-contents">オープンソースの動的なプログラミング言語で、 シンプルさと高い生産性を備えています。大きなWebアプリケーションから小さな日用ツールまで、さまざまなソフトウェアを作ることができます。</p>
-        </div>
-        <div class="lesson">
-          <div class="lesson-icon">
-            <img src="https://prog-8.com/images/html/advanced/php.png">
-            <p>PHP</p>
-          </div>
-          <p class="text-contents">HTMLだけではページの内容を変えることはできません。PHPはHTMLにプログラムを埋め込み、それを可能にします。</p>
-        </div>
-      </div>
-      <div class="clear"></div>
-    </div>
-  </div>
-  <div class="message-wrapper">
-    <div class="container">
-      <div class="heading">
-        <h2>さぁ、あなたもProgateでプログラミングを学んでみませんか?</h2>
-        <h3>Let's learn to code, learn to be creative!</h3>
-      </div>
-      <span class="btn message">さっそく開発する</span>
-    </div>
-  </div>
-  <footer>
-    <div class="container">
-      <img src="https://prog-8.com/images/html/advanced/footer_logo.png">
-      <p>Learn to Code, Learn to be Creative.</p>
-    </div>
-  </footer>
-</body>
+
+      -->
+    
+  </body>
+
 </html>
