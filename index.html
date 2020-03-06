@@ -34,7 +34,7 @@
       
       // rosbridgeと接続
 
-      const ros = new ROSLIB.Ros({url : 'ws://192.168.100.57:9090'});
+      const ros = new ROSLIB.Ros({url : 'ws://10.171.209.143:9090'});
 
       ros.on('connection', function() {console.log('Connected to websocket server.');});
       ros.on('error', function(error) {console.log('Error connecting to websocket server: ', error);});
